@@ -1,0 +1,119 @@
+import os
+import json
+import pathlib
+
+import requests
+
+from analyse import Analyser
+
+
+current_location = pathlib.Path(__file__).parent.resolve()
+
+
+class OllamaRequest:
+    def __init__(self,  model='phi3', stream=False):
+        self.model = model
+        self.stream = stream
+        self.results = []
+
+    def _send_request(self, prompt_id, prompt):
+        url = "http://localhost:11434/api/generate"
+        headers = {
+            "Content-Type": "application/json",
+        }
+        data = {
+            "model": self.model,
+            "prompt": f"{prompt}",
+            "options": {
+                "num_ctx": 4096
+            },
+            "stream": self.stream
+        }
+        response = requests.post(url, headers=headers, json=data)
+        print(f"The request status for prompt id {prompt_id} is {response.status_code}\n")
+        return response.json()
+
+    def process_prompts(self, prompts, requested_samples_file, output_file):
+        requested_ids = self._get_requested_ids(requested_samples_file)
+        for prompt in prompts:
+            sample_id = prompt[0]
+            if sample_id in requested_ids:
+                continue
+            
+            os.makedirs(os.path.dirname(requested_samples_file), exist_ok=True)
+            with open(requested_samples_file, 'a') as file:
+                file.write(f"{sample_id}\n")
+                
+            result = self._send_request(prompt[0], prompt[1])
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            with open(output_file, 'a') as file:
+                file.write(f"***Data Id {sample_id}: {result['response'].strip()}+++\n \n")
+                
+    def _get_requested_ids(self, requested_sample_file):
+        requested_ids = []
+        if not os.path.exists(requested_sample_file):
+            return []
+        with open(requested_sample_file, 'r') as file:
+            for line in file:
+                requested_ids.append(int(line.strip()))
+            
+        return requested_ids
+    
+                   
+class CodeCloneDetection:
+    def __init__(self, data_file, model='phi3',
+                 nl_instruction = 'do code 1 and code 2 solve identical problems with the same inputs and outputs ? answer with yes or no and no explanation.') -> None:
+        self.model = model
+        self.data_file = data_file
+        self.output_file = None
+        self.data = self._read_data(data_file)
+        self.prompts = [self._make_probmpt(d['id'], d['code1'], d['code2'], nl_instruction) for d in self.data]
+        self.gpt = OllamaRequest(model=self.model, stream=False)
+    
+    def _get_requested_ids(self, file_name):
+        requested_ids = []
+        if not os.path.exists(file_name):
+            return []
+        with open(file_name, 'r') as file:
+            for line in file:
+                requested_ids.append(int(line.strip()))
+            
+        return requested_ids
+
+    def _read_data(self, data_file):
+        with open(data_file, 'r') as f:
+            for line in f:
+                data = json.loads(line)
+                
+        return data
+
+    def _make_probmpt(self, id, code1, code2, nl_instruction):
+        prompt = f"""
+        code1:
+        {code1}
+        code2:
+        {code2}
+        {nl_instruction}
+        """
+        return (id, prompt)
+    
+    def run_processing(self, requested_samples_file, output_file):
+        self.output_file = output_file
+        self.gpt.process_prompts(self.prompts, requested_samples_file, output_file)
+        return self
+
+
+if __name__ == "__main__":
+    ollama_request = CodeCloneDetection(
+        data_file=os.path.join(current_location, 'ruby_java_test_clone3.jsonl'),
+        ).run_processing(
+        os.path.join(current_location, 'results', 'requested_ids_0.1.txt'), 
+        os.path.join(current_location, 'results', 'results_java_01.txt')
+    )
+    
+    assert 1 == 1
+    analyser1 = Analyser(
+        ollama_request.data_file,
+        ollama_request.output_file
+    )
+    analyser1.compute_metrics('Metrics for phi3 Cross language ccd', save_to_file=True)

@@ -1,0 +1,5 @@
+Metrics for phi3 Cross language ccd
+
+F1 score: 0.5152354570637119
+Precision: 0.7099236641221374
+Recall: 0.4043478260869565
