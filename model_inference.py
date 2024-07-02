@@ -17,7 +17,7 @@ class ModelInterface:
             result = self._send_request(prompt[0], prompt[1])
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
             with open(output_file, 'a') as file:
-                file.write(f"***Data Id {sample_id}: {result['response'].strip()}+++\n \n")
+                file.write(f"***Data Id {sample_id}: {result.strip()}+++\n \n")
                 
     def _get_requested_ids(self, requested_sample_file):
         requested_ids = []
@@ -32,4 +32,8 @@ class ModelInterface:
     
     @abstractmethod
     def _send_request(self, prompt_id, prompt):
+        pass
+    
+    @abstractmethod
+    def make_prompt(self, id, code1, code2, nl_instruction):
         pass

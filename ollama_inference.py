@@ -34,7 +34,7 @@ class OllamaInference(ModelInterface):
         }
         response = requests.post(url, headers=headers, json=data)
         print(f"The request status for prompt id {prompt_id} is {response.status_code}\n")
-        return response.json()
+        return response.json()['response']
     
     def make_prompt(self, id, code1, code2, nl_instruction):
         prompt = f"""

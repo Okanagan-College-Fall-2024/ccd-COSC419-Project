@@ -34,7 +34,7 @@ def main():
 
 
     # Create an instance of CodeCloneDetection
-    detection = CodeCloneDetection(data_file=args.data_file, inference_class=model_cls, model=args.model)
+    detection = CodeCloneDetection(data_file=args.data_file, inference_class=model_cls, model=model)
 
     # Run the processing
     detection.run_processing(

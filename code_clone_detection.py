@@ -43,6 +43,6 @@ class CodeCloneDetection:
         return (id, prompt)
     
     def run_processing(self, requested_samples_file, output_file):
-        self.output_file = output_file
+        self.output_file = output_file 
         self.gpt.process_prompts(self.prompts, requested_samples_file, output_file)
         return self
